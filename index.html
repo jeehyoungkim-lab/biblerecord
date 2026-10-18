@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>나의 성경읽기 진도표</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #212529;
+            --primary: #4a6fa5;
+            --primary-light: #e8eef8;
+            --border-color: #dee2e6;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        h1 {
+            text-align: center;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+        .progress-container {
+            background-color: var(--border-color);
+            border-radius: 8px;
+            height: 20px;
+            width: 100%;
+            margin-bottom: 25px;
+            overflow: hidden;
+            position: relative;
+        }
+        .progress-bar {
+            background-color: var(--primary);
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .progress-text {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            top: 0;
+            left: 0;
+            font-size: 12px;
+            line-height: 20px;
+            font-weight: bold;
+            color: #000;
+        }
+        .tab-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-color);
+            cursor: pointer;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        .tab-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 5px;
+        }
+        .bible-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+        .bible-item {
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            text-align: center;
+            border-radius: 6px;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s;
+            background: var(--bg-color);
+            font-size: 14px;
+        }
+        .bible-item.checked {
+            background-color: var(--primary-light);
+            border-color: var(--primary);
+            color: var(--primary);
+            font-weight: bold;
+        }
+        .reset-container {
+            text-align: right;
+            margin-top: 20px;
+        }
+        .reset-btn {
+            background: #e63946;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>📖 성경읽기 진도표</h1>
+    
+    <!-- 전체 진행률 바 -->
+    <div class="progress-container">
+        <div class="progress-bar" id="progressBar"></div>
+        <div class="progress-text" id="progressText">0% (0 / 66독 완성)</div>
+    </div>
+
+    <!-- 구약 / 신약 탭 구별 -->
+    <div class="tab-buttons">
+        <button class="tab-btn active" onclick="switchTab('ot')">구약 성경 (39권)</button>
+        <button class="tab-btn" onclick="switchTab('nt')">신약 성경 (27권)</button>
+    </div>
+
+    <!-- 성경 목록 출력 영역 -->
+    <div id="bibleContent"></div>
+
+    <div class="reset-container">
+        <button class="reset-btn" onclick="resetStorage()">전체 초기화</button>
+    </div>
+</div>
+
+<script>
+    // 성경 목록 데이터 정의 (이름과 약어 수록)
+    const otBooks = [
+        "창세기", "출애굽기", "레위기", "민수기", "신명기", "여호수아", "사사기", "루기", 
+        "사무엘상", "사무엘하", "열왕기상", "열왕기하", "역대상", "역대하", "에스라", "느헤미야", 
+        "에스더", "욥기", "시편", "잠언", "전도서", "아가", "이사야", "예레미야", "예레미야애가", 
+        "에스겔", "다니엘", "호세아", "요엘", "아모스", "오바댜", "요나", "미가", "나훔", 
+        "하박국", "스바냐", "학개", "스가랴", "말라기"
+    ];
+
+    const ntBooks = [
+        "마태복음", "마가복음", "누가복음", "요한복음", "사도행전", "로마서", "고린도전서", 
+        "고린도후서", "갈라디아서", "에베소서", "빌립보서", "골로새서", "데살로니가전서", 
+        "데살로니가후서", "디모데전서", "디모데후서", "디도서", "빌레몬서", "히브리서", 
+        "야고보서", "베드로전서", "베드로후서", "요한일서", "요한이서", "요한삼서", "유다서", "요한계시록"
+    ];
+
+    let currentTab = 'ot';
+    // 로컬 스토리지에서 기존 기록 불러오기 (없으면 빈 객체)
+    let readStatus = JSON.parse(localStorage.getItem('bibleReadStatus')) || {};
+
+    // 화면 그리기 함수
+    function render() {
+        const contentDiv = document.getElementById('bibleContent');
+        contentDiv.innerHTML = '';
+
+        const books = currentTab === 'ot' ? otBooks : ntBooks;
+        
+        const grid = document.createElement('div');
+        grid.className = 'bible-grid';
+
+        books.forEach(book => {
+            const item = document.createElement('div');
+            item.className = 'bible-item';
+            item.innerText = book;
+            
+            // 읽은 책이라면 체크 스타일 적용
+            if (readStatus[book]) {
+                item.classList.add('checked');
+            }
+
+            // 클릭 시 상태 토글 및 저장
+            item.onclick = () => toggleBook(book);
+            grid.appendChild(item);
+        });
+
+        contentDiv.appendChild(grid);
+        updateProgress();
+    }
+
+    // 구약/신약 탭 전환
+    function switchTab(tab) {
+        currentTab = tab;
+        document.querySelectorAll('.tab-btn').forEach((btn, idx) => {
+            btn.classList.toggle('active', (idx === 0 && tab === 'ot') || (idx === 1 && tab === 'nt'));
+        });
+        render();
+    }
+
+    // 책 클릭 시 상태 변경 및 저장
+    function toggleBook(book) {
+        readStatus[book] = !readStatus[book];
+        localStorage.setItem('bibleReadStatus', JSON.stringify(readStatus));
+        render();
+    }
+
+    // 전체 진행률 계산 및 상단 바 업데이트
+    function updateProgress() {
+        const totalBooks = otBooks.length + ntBooks.length;
+        const readCount = Object.keys(readStatus).filter(key => readStatus[key]).length;
+        const percent = Math.round((readCount / totalBooks) * 100);
+
+        document.getElementById('progressBar').style.width = percent + '%';
+        document.getElementById('progressText').innerText = `${percent}% (${readCount} / ${totalBooks}권 완료)`;
+    }
+
+    // 로컬 스토리지 데이터 전체 삭제
+    function resetStorage() {
+        if (confirm('정말로 모든 읽기 기록을 초기화하시겠습니까?')) {
+            readStatus = {};
+            localStorage.removeItem('bibleReadStatus');
+            render();
+        }
+    }
+
+    // 초기 실행
+    render();
+</script>
+</body>
+</html>
