@@ -3,16 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>나의 성경읽기 진도표</title>
+    <title>나의 성경읽기 다독 진도표</title>
     <style>
         :root {
             --bg-color: #f8f9fa;
             --card-bg: #ffffff;
             --text-color: #212529;
             --primary: #4a6fa5;
-            --primary-light: #e8eef8;
             --border-color: #dee2e6;
-            --group-bg: #f1f3f5;
+            /* 독수별 색상 단계 (많이 읽을수록 진해짐) */
+            --level-1: #e8eef8;
+            --level-2: #cbd9ef;
+            --level-3: #9fbce3;
+            --level-4: #6d96cc;
+            --level-5: #4a6fa5;
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
@@ -40,32 +44,18 @@
             margin-bottom: 15px;
             font-size: 24px;
         }
-        .progress-container {
-            background-color: var(--border-color);
+        
+        /* 통계 요약 영역 (바둑판 전체 현황) */
+        .summary-container {
+            background-color: #f1f3f5;
+            padding: 12px;
             border-radius: 8px;
-            height: 20px;
-            width: 100%;
             margin-bottom: 20px;
-            overflow: hidden;
-            position: relative;
-        }
-        .progress-bar {
-            background-color: var(--primary);
-            height: 100%;
-            width: 0%;
-            transition: width 0.3s ease;
-        }
-        .progress-text {
-            position: absolute;
-            width: 100%;
+            font-size: 14px;
             text-align: center;
-            top: 0;
-            left: 0;
-            font-size: 12px;
-            line-height: 20px;
             font-weight: bold;
-            color: #000;
         }
+
         .tab-buttons {
             display: flex;
             gap: 10px;
@@ -86,50 +76,45 @@
             color: white;
             border-color: var(--primary);
         }
-        
-        /* 세부 분류 스타일 */
-        .bible-group {
-            background: var(--group-bg);
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-        }
-        .group-title {
-            font-size: 14px;
-            font-weight: bold;
-            color: #495057;
-            margin-bottom: 8px;
-            border-left: 3px solid var(--primary);
-            padding-left: 6px;
-        }
 
-        /* 그리드 및 가로 크기 슬림 조정 */
+        /* 콤팩트 바둑판 격자 레이아웃 */
         .bible-grid {
             display: grid;
-            /* 가로 최소 크기를 100px -> 70px로 대폭 줄여 한 줄에 더 많이 배치 */
-            grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+            /* 가로 크기를 숫자까지 표현할 수 있도록 기존 70px에서 85px로 살짝 조정 */
+            grid-template-columns: repeat(auto-fill, minmax(85px, 1fr));
             gap: 6px;
+            margin-bottom: 20px;
         }
         .bible-item {
             border: 1px solid var(--border-color);
-            padding: 6px 2px; /* 위아래, 좌우 여백을 줄여 콤팩트하게 변경 */
+            padding: 8px 2px;
             text-align: center;
             border-radius: 4px;
             cursor: pointer;
             user-select: none;
             transition: all 0.15s;
             background: #ffffff;
-            font-size: 12px; /* 글자 크기를 약간 줄여 잘림 방지 */
-            white-space: nowrap; /* 글자가 아래로 밀리지 않도록 고정 */
+            font-size: 12px;
+            white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
-        .bible-item.checked {
-            background-color: var(--primary-light);
-            border-color: var(--primary);
-            color: var(--primary);
-            font-weight: bold;
+        /* 마우스 우클릭 안내용 작은 팁 */
+        .help-text {
+            font-size: 11px;
+            color: #868e96;
+            text-align: right;
+            margin-bottom: 5px;
         }
+
+        /* 독수별 동적 배경색 설정 */
+        .bible-item.count-1 { background-color: var(--level-1); color: #1e3a63; font-weight: 500; }
+        .bible-item.count-2 { background-color: var(--level-2); color: #1a3358; font-weight: 500; }
+        .bible-item.count-3 { background-color: var(--level-3); color: #ffffff; font-weight: bold; border-color: #8faed6; }
+        .bible-item.count-4 { background-color: var(--level-4); color: #ffffff; font-weight: bold; border-color: #5b87c2; }
+        .bible-item.count-5, 
+        .bible-item.count-max { background-color: var(--level-5); color: #ffffff; font-weight: bold; border-color: var(--primary); }
+
         .reset-container {
             text-align: right;
             margin-top: 20px;
@@ -148,18 +133,19 @@
 <body>
 
 <div class="container">
-    <h1>📖 성경읽기 진도표</h1>
+    <h1>📖 성경읽기 진도표 (다독용)</h1>
     
-    <div class="progress-container">
-        <div class="progress-bar" id="progressBar"></div>
-        <div class="progress-text" id="progressText">0% (0 / 66권 완료)</div>
+    <!-- 전체 누적 독수 확인 영역 -->
+    <div class="summary-container" id="summaryText">
+        현재 총 누적 읽기: 0독 분량 (완료된 책: 0 / 66권)
     </div>
 
     <div class="tab-buttons">
-        <button class="tab-btn active" onclick="switchTab('ot')">구약 성경</button>
-        <button class="tab-btn" onclick="switchTab('nt')">신약 성경</button>
+        <button class="tab-btn active" onclick="switchTab('ot')">구약 성경 (39권)</button>
+        <button class="tab-btn" onclick="switchTab('nt')">신약 성경 (27권)</button>
     </div>
 
+    <div class="help-text">💡 좌클릭: +1독 / 우클릭(길게 누르기): -1독</div>
     <div id="bibleContent"></div>
 
     <div class="reset-container">
@@ -168,89 +154,69 @@
 </div>
 
 <script>
-    // 구조화된 성경 데이터 (전통적 7대 분류 적용)
-    const bibleData = {
-        ot: [
-            {
-                title: "율법서 (모세오경)",
-                books: ["창세기", "출애굽기", "레위기", "민수기", "신명기"]
-            },
-            {
-                title: "역사서",
-                books: ["여호수아", "사사기", "룻기", "사무엘상", "사무엘하", "열왕기상", "열왕기하", "역대상", "역대하", "에스라", "느헤미야", "에스더"]
-            },
-            {
-                title: "시가서",
-                books: ["욥기", "시편", "잠언", "전도서", "아가"]
-            },
-            {
-                title: "선지서 (대/소선지서)",
-                books: ["이사야", "예레미야", "예레미야애가", "에스겔", "다니엘", "호세아", "요엘", "아모스", "오바댜", "요나", "미가", "나훔", "하박국", "스바냐", "학개", "스가랴", "말라기"]
-            }
-        ],
-        nt: [
-            {
-                title: "복음서",
-                books: ["마태복음", "마가복음", "누가복음", "요한복음"]
-            },
-            {
-                title: "역사서",
-                books: ["사도행전"]
-            },
-            {
-                title: "서신서 (바울/일반서신)",
-                books: ["로마서", "고린도전서", "고린도후서", "갈라디아서", "에베소서", "빌립보서", "골로새서", "데살로니가전서", "데살로니가후서", "디모데전서", "디모데후서", "디도서", "빌레몬서", "히브리서", "야고보서", "베드로전서", "베드로후서", "요한일서", "요한이서", "요한삼서", "유다서"]
-            },
-            {
-                title: "예언서",
-                books: ["요한계시록"]
-            }
-        ]
-    };
+    // '루기'에서 '룻기'로 정확히 수정 완료
+    const otBooks = [
+        "창세기", "출애굽기", "레위기", "민수기", "신명기", "여호수아", "사사기", "룻기", 
+        "사무엘상", "사무엘하", "열왕기상", "열왕기하", "역대상", "역대하", "에스라", "느헤미야", 
+        "에스더", "욥기", "시편", "잠언", "전도서", "아가", "이사야", "예레미야", "예레미야애가", 
+        "에스겔", "다니엘", "호세아", "요엘", "아모스", "오바댜", "요나", "미가", "나훔", 
+        "하박국", "스바냐", "학개", "스가랴", "말라기"
+    ];
+
+    const ntBooks = [
+        "마태복음", "마가복음", "누가복음", "요한복음", "사도행전", "로마서", "고린도전서", 
+        "고린도후서", "갈라디아서", "에베소서", "빌립보서", "골로새서", "데살로니가전서", 
+        "데살로니가후서", "디모데전서", "디모데후서", "디도서", "빌레몬서", "히브리서", 
+        "야고보서", "베드로전서", "베드로후서", "요한일서", "요한이서", "요한삼서", "유다서", "요한계시록"
+    ];
 
     let currentTab = 'ot';
-    let readStatus = JSON.parse(localStorage.getItem('bibleReadStatus')) || {};
+    // 각 권당 숫자를 저장하기 위해 초기값을 빈 객체로 세팅 (숫자로 관리)
+    let readCounts = JSON.parse(localStorage.getItem('bibleReadCounts')) || {};
 
     function render() {
         const contentDiv = document.getElementById('bibleContent');
         contentDiv.innerHTML = '';
 
-        const groups = bibleData[currentTab];
+        const books = currentTab === 'ot' ? otBooks : ntBooks;
         
-        groups.forEach(group => {
-            // 소분류 박스 생성
-            const groupDiv = document.createElement('div');
-            groupDiv.className = 'bible-group';
+        const grid = document.createElement('div');
+        grid.className = 'bible-grid';
 
-            // 소분류 제목 생성
-            const titleDiv = document.createElement('div');
-            titleDiv.className = 'group-title';
-            titleDiv.innerText = group.title;
-            groupDiv.appendChild(titleDiv);
+        books.forEach(book => {
+            const count = readCounts[book] || 0;
+            
+            const item = document.createElement('div');
+            item.className = 'bible-item';
+            // 책 이름 옆에 숫자를 직관적으로 표시
+            item.innerText = `${book} ${count}`;
+            item.title = `${book} (${count}독 함)`;
 
-            // 콤팩트 그리드 생성
-            const grid = document.createElement('div');
-            grid.className = 'bible-grid';
-
-            group.books.forEach(book => {
-                const item = document.createElement('div');
-                item.className = 'bible-item';
-                item.innerText = book;
-                item.title = book; // 마우스 올리면 풀네임 툴팁 표시
-                
-                if (readStatus[book]) {
-                    item.classList.add('checked');
+            // 숫자에 따라 배경색 등급 클래스 부여
+            if (count > 0) {
+                if (count <= 5) {
+                    item.classList.add(`count-${count}`);
+                } else {
+                    item.classList.add('count-max');
                 }
+            }
 
-                item.onclick = () => toggleBook(book);
-                grid.appendChild(item);
-            });
+            // 좌클릭: 독수 증가
+            item.onclick = (e) => {
+                changeCount(book, 1);
+            };
 
-            groupDiv.appendChild(grid);
-            contentDiv.appendChild(groupDiv);
+            // 우클릭: 독수 감소 (메뉴가 뜨는 기본 동작은 차단)
+            item.oncontextmenu = (e) => {
+                e.preventDefault();
+                changeCount(book, -1);
+            };
+
+            grid.appendChild(item);
         });
 
-        updateProgress();
+        contentDiv.appendChild(grid);
+        updateSummary();
     }
 
     function switchTab(tab) {
@@ -261,27 +227,37 @@
         render();
     }
 
-    function toggleBook(book) {
-        readStatus[book] = !readStatus[book];
-        localStorage.setItem('bibleReadStatus', JSON.stringify(readStatus));
+    // 카운트 가감 계산 함수
+    function changeCount(book, amount) {
+        let currentCount = readCounts[book] || 0;
+        currentCount += amount;
+
+        if (currentCount < 0) currentCount = 0; // 음수 방지
+
+        readCounts[book] = currentCount;
+        localStorage.setItem('bibleReadCounts', JSON.stringify(readCounts));
         render();
     }
 
-    function updateProgress() {
-        // 전체 66권 목록 통합 계산
-        const allBooks = [...bibleData.ot, ...bibleData.nt].reduce((acc, curr) => acc.concat(curr.books), []);
-        const totalBooks = allBooks.length;
-        const readCount = allBooks.filter(book => readStatus[book]).length;
-        const percent = Math.round((readCount / totalBooks) * 100);
+    // 전체 다독 통계 요약 업데이트
+    function updateSummary() {
+        const allBooks = [...otBooks, ...ntBooks];
+        
+        // 1번 이상 읽은 책의 개수
+        const startedBooksCount = allBooks.filter(book => (readCounts[book] || 0) > 0).length;
+        
+        // 전체 성경구절 기준 총 누적 판수 계산 (소수점 첫째자리까지 표시)
+        const totalChaptersRead = allBooks.reduce((acc, book) => acc + (readCounts[book] || 0), 0);
+        const overallReads = (totalChaptersRead / 66).toFixed(1);
 
-        document.getElementById('progressBar').style.width = percent + '%';
-        document.getElementById('progressText').innerText = `${percent}% (${readCount} / ${totalBooks}권 완료)`;
+        document.getElementById('summaryText').innerText = 
+            `현재 총 누적 읽기: 약 ${overallReads}독 분량 (한 번이라도 읽은 책: ${startedBooksCount} / 66권)`;
     }
 
     function resetStorage() {
-        if (confirm('정말로 모든 읽기 기록을 초기화하시겠습니까?')) {
-            readStatus = {};
-            localStorage.removeItem('bibleReadStatus');
+        if (confirm('정말로 모든 읽기 기록과 누적 독수를 초기화하시겠습니까?')) {
+            readCounts = {};
+            localStorage.removeItem('bibleReadCounts');
             render();
         }
     }
